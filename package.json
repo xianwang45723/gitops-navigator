@@ -1,0 +1,315 @@
+{
+  "name": "gitops-nav",
+  "displayName": "GitOps Nav",
+  "description": "Navigate a gitops repo, its chart repos, pipelines and datasets from one window.",
+  "version": "0.2.0",
+  "publisher": "local",
+  "private": true,
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitopsNav.goTo",
+        "title": "Go to App, Pipeline or Dataset\u2026",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.goToApp",
+        "title": "Go to App\u2026",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.goToPipeline",
+        "title": "Go to Pipeline\u2026",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.goToDataset",
+        "title": "Go to Dataset\u2026",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.revealGitops",
+        "title": "Show gitops Folder in Explorer",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.refresh",
+        "title": "Refresh Index",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.showLog",
+        "title": "Show Log",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.createWorkspace",
+        "title": "Create Workspace File",
+        "category": "GitOps Nav"
+      },
+      {
+        "command": "gitopsNav.chooseBrowser",
+        "title": "Choose Browser for Links\u2026",
+        "category": "GitOps Nav"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "gitopsNav.goTo",
+        "key": "ctrl+alt+g",
+        "win": "ctrl+shift+g",
+        "mac": "cmd+alt+g"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "GitOps Nav",
+        "properties": {
+          "gitopsNav.root": {
+            "type": "string",
+            "default": "",
+            "description": "Folder that holds all the repos side by side. Empty = the first workspace folder."
+          },
+          "gitopsNav.gitopsRepo": {
+            "type": "string",
+            "default": "gitops",
+            "description": "Folder name of the gitops repo (laid out as <namespace>/<app>/cicd.yaml)."
+          },
+          "gitopsNav.repoKey": {
+            "type": "string",
+            "default": "repo",
+            "markdownDescription": "Key in each gitops app's `cicd.yaml` / `ci.yaml` that holds the component repo's `.git` URL. Use a dotted path for a nested key, e.g. `source.repo`."
+          },
+          "gitopsNav.pipelineRepos": {
+            "type": "array",
+            "default": [
+              {
+                "repo": "pipelines-a",
+                "flavour": "a"
+              },
+              {
+                "repo": "pipelines-b",
+                "flavour": "b"
+              }
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "repo": {
+                  "type": "string",
+                  "description": "Folder name of the repo."
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Folder inside the repo to search, e.g. `jobs`. Empty = the whole repo."
+                },
+                "flavour": {
+                  "type": "string",
+                  "description": "Label shown in search results."
+                }
+              },
+              "required": [
+                "repo"
+              ]
+            },
+            "description": "Repos to search for files named `pipeline`, optionally limited to a folder inside each."
+          },
+          "gitopsNav.databaseRepo": {
+            "type": "string",
+            "default": "database",
+            "description": "Folder name of the database repo."
+          },
+          "gitopsNav.datasetPattern": {
+            "type": "string",
+            "default": "datasets/${dataset}/structure.sql",
+            "markdownDescription": "Where dataset files are in the database repo, relative to its root. Placeholders: `${dataset}` (any name), `${dataset_upper}` (an all-uppercase name, shown lowercased), `${dataset_lower}` (an all-lowercase name); `*` matches anything within one folder or file name. Examples: `datasets/${dataset}/structure.sql`, `some/folder/${dataset_upper}_blah.sql`."
+          },
+          "gitopsNav.gitopsBranch": {
+            "type": "string",
+            "default": "dev",
+            "markdownDescription": "Branch the gitops repo should normally be on. A warning shows in the status bar when it isn't. Empty = no warning."
+          },
+          "gitopsNav.decorations": {
+            "type": "string",
+            "enum": [
+              "both",
+              "topBar",
+              "inline"
+            ],
+            "default": "both",
+            "enumDescriptions": [
+              "Show the link bar at the top of files and make values clickable.",
+              "Only the link bar at the top of files.",
+              "Only clickable values."
+            ],
+            "description": "Which link style to show."
+          },
+          "gitopsNav.componentIcon": {
+            "type": "string",
+            "enum": [
+              "box",
+              "git"
+            ],
+            "default": "box",
+            "enumDescriptions": [
+              "Package (3D box) icon.",
+              "Source control (git) icon."
+            ],
+            "description": "Icon for component repos in search and the link bar."
+          },
+          "gitopsNav.gitopsTint": {
+            "type": "string",
+            "enum": [
+              "accent",
+              "muted",
+              "off"
+            ],
+            "default": "accent",
+            "enumDescriptions": [
+              "The theme's link colour (gitopsNav.gitopsAccent).",
+              "The theme's secondary text colour (gitopsNav.gitopsMuted).",
+              "No tint."
+            ],
+            "markdownDescription": "Tint the gitops folder and the folders under it in the explorer (files are left alone), so it stands out subtly in any theme. Change the exact colours with `workbench.colorCustomizations`."
+          },
+          "gitopsNav.componentOpenMode": {
+            "type": "string",
+            "enum": [
+              "file",
+              "folder"
+            ],
+            "default": "file",
+            "enumDescriptions": [
+              "Open the first file from `gitopsNav.componentOpenOrder` that exists.",
+              "Just show the repo folder in the explorer, ignoring `gitopsNav.componentOpenOrder`."
+            ],
+            "markdownDescription": "What jumping to a component repo does."
+          },
+          "gitopsNav.componentOpenOrder": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "README.md",
+              "Dockerfile",
+              "${chart}/values.yaml"
+            ],
+            "markdownDescription": "Files to open when jumping to a component repo, in priority order: the first one that exists is opened. Paths are relative to the repo root; `${chart}` is the folder holding `Chart.yaml`. If none exist, the repo folder is shown in the explorer."
+          }
+        }
+      },
+      {
+        "title": "External Links",
+        "properties": {
+          "gitopsNav.bitbucketUrl": {
+            "type": "string",
+            "default": "",
+            "description": "Web address of Bitbucket, e.g. https://bitbucket.invalid. Empty = https://<host of the git remote>.",
+            "order": 0
+          },
+          "gitopsNav.defaultBranches": {
+            "type": "object",
+            "default": {
+              "gitops": "dev"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Branch for Bitbucket links when your checked-out branch isn't on the remote, by repo folder name. Repos not listed use Bitbucket's default branch.",
+            "order": 1
+          },
+          "gitopsNav.argoCdUrl": {
+            "type": "string",
+            "default": "https://argocd.invalid/applications/${name}",
+            "markdownDescription": "Argo CD page for an app, shown as an \"Argo CD\" link at the top of its gitops files. Placeholders (URL-encoded): `${name}` = the app's folder name in gitops, `${namespace}` = its namespace, `${repoName}` = the component repo, from the end of its `repo:` URL. Empty = no link.",
+            "order": 2
+          },
+          "gitopsNav.argoCdDevUrl": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Argo CD page linked from `values-dev.yaml` (the dev chart, deployed to `<namespace>-dev`), shown as \"Argo CD (dev)\". Same placeholders as `#gitopsNav.argoCdUrl#`: `${name}`, `${namespace}` (the gitops namespace, so write `${namespace}-dev` for the dev one), `${repoName}`. Empty = use `#gitopsNav.argoCdUrl#`.",
+            "order": 3
+          },
+          "gitopsNav.argoCdCiUrl": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Argo CD page linked from `values-ci.yaml` (the CI chart that lays down the Tekton pipeline), shown as \"Argo CD (CI)\". Same placeholders as `#gitopsNav.argoCdUrl#`: `${name}`, `${namespace}`, `${repoName}`. Empty = use `#gitopsNav.argoCdUrl#`.",
+            "order": 4
+          },
+          "gitopsNav.pipelineDashboardUrl": {
+            "type": "string",
+            "default": "https://pipelines.invalid/pipelines/${name}",
+            "markdownDescription": "Web page for a pipeline, shown as a \"pipeline\" link at the top of each `pipeline` file. Placeholders (URL-encoded): `${name}` = the pipeline's `name:`, `${repoName}` = the repo holding the pipeline. Empty = no link.",
+            "order": 5
+          }
+        }
+      }
+    ],
+    "icons": {
+      "gitops-pipeline": {
+        "description": "GitOps Nav pipeline",
+        "default": {
+          "fontPath": "./media/gitops-nav.woff",
+          "fontCharacter": "\\E001"
+        }
+      },
+      "gitops-helm-config": {
+        "description": "GitOps Nav helm config (Lucide ship-wheel)",
+        "default": {
+          "fontPath": "./media/gitops-nav.woff",
+          "fontCharacter": "\\E002"
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "gitopsNav.gitopsAccent",
+        "description": "Text colour for gitops files when gitopsNav.gitopsTint is \"accent\".",
+        "defaults": {
+          "dark": "textLink.foreground",
+          "light": "textLink.foreground",
+          "highContrast": "textLink.foreground",
+          "highContrastLight": "textLink.foreground"
+        }
+      },
+      {
+        "id": "gitopsNav.gitopsMuted",
+        "description": "Text colour for gitops files when gitopsNav.gitopsTint is \"muted\".",
+        "defaults": {
+          "dark": "descriptionForeground",
+          "light": "descriptionForeground",
+          "highContrast": "descriptionForeground",
+          "highContrastLight": "descriptionForeground"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "test": "tsc -p . && node --test out/test/",
+    "test:report": "node scripts/test-report.js",
+    "package": "tsc -p . && vsce package --skip-license --allow-missing-repository"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "1.88",
+    "@vscode/vsce": "^4.1.1",
+    "c8": "^12.0.0",
+    "typescript": "^7.0.2"
+  }
+}
